@@ -414,14 +414,9 @@ export default function Player() {
             {/* Desktop Track Info */}
             <div className="hidden sm:flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-widest text-accent font-bold px-1.5 py-0.5 rounded bg-accent/15 border border-accent/25">
-                    Independence Day
-                  </span>
-                  <h2 className="text-white text-sm font-semibold truncate">
-                    {currentTrack.title}
-                  </h2>
-                </div>
+                <h2 className="text-white text-sm font-semibold truncate">
+                  {currentTrack.title}
+                </h2>
                 <p className="text-white/50 text-xs truncate mt-0.5">
                   {currentTrack.artist} • {currentTrack.film} ({currentTrack.year})
                 </p>
