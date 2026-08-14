@@ -5,10 +5,10 @@ export default function SocialLinks() {
     <div className="flex items-center gap-3">
       {/* Twitter/X */}
       <a
-        href="#"
+        href="https://x.com/dhruvgarg_23"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Twitter"
+        aria-label="X (Twitter) profile"
         className="text-white/50 hover:text-white/90 transition-colors duration-200"
       >
         <svg

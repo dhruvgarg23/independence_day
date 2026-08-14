@@ -107,6 +107,39 @@ function PauseIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+function PlaylistIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+// Mini animated equalizer icon for active playing track
+function LiveEqualizer() {
+  return (
+    <div className="flex items-end gap-[2px] h-3.5 w-3.5 justify-center">
+      <span className="w-[3px] bg-accent rounded-full animate-[pulse_0.6s_ease-in-out_infinite] h-full shadow-[0_0_6px_rgba(255,153,51,0.6)]" />
+      <span className="w-[3px] bg-accent rounded-full animate-[pulse_0.4s_ease-in-out_infinite_0.2s] h-2/3 shadow-[0_0_6px_rgba(255,153,51,0.6)]" />
+      <span className="w-[3px] bg-accent rounded-full animate-[pulse_0.8s_ease-in-out_infinite_0.4s] h-4/5 shadow-[0_0_6px_rgba(255,153,51,0.6)]" />
+    </div>
+  );
+}
+
 // Seek bar with direct scrubbing and touch support
 function SeekBar({
   progress,
@@ -162,8 +195,12 @@ export default function Player() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playlistPanelRef = useRef<HTMLDivElement | null>(null);
+  const activeTrackItemRef = useRef<HTMLButtonElement | null>(null);
+
   const trackIndexRef = useRef(trackIndex);
   trackIndexRef.current = trackIndex;
 
@@ -221,6 +258,46 @@ export default function Player() {
     };
   }, []);
 
+  // Smooth auto-scroll active track into view when playlist opens
+  useEffect(() => {
+    if (isPlaylistOpen && activeTrackItemRef.current) {
+      activeTrackItemRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [isPlaylistOpen, trackIndex]);
+
+  // Close panel on Escape key or outside click
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isPlaylistOpen) {
+        setIsPlaylistOpen(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        isPlaylistOpen &&
+        playlistPanelRef.current &&
+        !playlistPanelRef.current.contains(e.target as Node)
+      ) {
+        const target = e.target as HTMLElement;
+        if (!target.closest("[data-playlist-trigger]")) {
+          setIsPlaylistOpen(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isPlaylistOpen]);
+
   const playTrack = useCallback((index: number, seekTo: number = 0) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -252,6 +329,12 @@ export default function Player() {
         }
       });
   }, []);
+
+  const selectSong = useCallback((index: number) => {
+    setTrackIndex(index);
+    setProgress(0);
+    playTrack(index, 0);
+  }, [playTrack]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -339,9 +422,108 @@ export default function Player() {
   const effectiveDuration = duration || currentTrack.duration;
 
   return (
-    <div className="w-full flex flex-col items-center safe-bottom px-4 pb-4 sm:px-6 sm:pb-6">
+    <div className="w-full flex flex-col items-center safe-bottom px-4 pb-4 sm:px-6 sm:pb-6 relative">
+      {/* ═══════════ CLOSEABLE SONG SELECTION PANEL ═══════════ */}
+      {isPlaylistOpen && (
+        <div
+          ref={playlistPanelRef}
+          className="w-full max-w-sm sm:max-w-xl mb-3 glass rounded-[26px] sm:rounded-3xl p-4 sm:p-5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-3 duration-200 z-30"
+          role="dialog"
+          aria-label="Song Selection Playlist"
+        >
+          {/* Panel Header */}
+          <div className="flex items-center justify-between pb-3 mb-2.5 border-b border-white/10">
+            <div className="flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-full bg-accent/20 border border-accent/30 text-accent flex items-center justify-center text-xs shadow-inner">
+                🎵
+              </span>
+              <div>
+                <h3 className="text-white text-sm font-semibold tracking-wide flex items-center gap-2">
+                  Choose Song
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-accent px-1.5 py-0.5 rounded bg-accent/15 border border-accent/25">
+                    {tracks.length} Tracks
+                  </span>
+                </h3>
+                <p className="text-white/50 text-[11px] mt-0.5">
+                  Independence Day Patriotic Classics
+                </p>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setIsPlaylistOpen(false)}
+              className="p-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-150"
+              aria-label="Close playlist"
+              title="Close panel"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          {/* Smooth Scrollable Song List */}
+          <div className="smooth-scroll flex flex-col gap-1.5 max-h-56 sm:max-h-64 overflow-y-auto overscroll-contain pr-1">
+            {tracks.map((track, idx) => {
+              const isSelected = trackIndex === idx;
+
+              return (
+                <button
+                  key={track.id}
+                  ref={isSelected ? activeTrackItemRef : null}
+                  onClick={() => selectSong(idx)}
+                  className={`w-full flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl text-left transition-all duration-200 group cursor-pointer ${
+                    isSelected
+                      ? "bg-accent/15 border border-accent/35 shadow-sm text-white"
+                      : "bg-white/[0.03] hover:bg-white/[0.10] border border-white/[0.06] hover:border-white/20 text-white/80 hover:text-white hover:translate-x-0.5"
+                  }`}
+                >
+                  {/* Track number or Equalizer */}
+                  <div className="w-6 flex items-center justify-center flex-shrink-0">
+                    {isSelected && isPlaying ? (
+                      <LiveEqualizer />
+                    ) : (
+                      <span
+                        className={`text-xs font-mono font-semibold transition-colors ${
+                          isSelected ? "text-accent" : "text-white/40 group-hover:text-white/80"
+                        }`}
+                      >
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Track Details */}
+                  <div className="flex-1 min-w-0">
+                    <h4
+                      className={`text-xs sm:text-sm font-medium truncate transition-colors ${
+                        isSelected ? "text-accent font-semibold" : "text-white group-hover:text-white/95"
+                      }`}
+                    >
+                      {track.title}
+                    </h4>
+                    <p className="text-[11px] text-white/50 truncate mt-0.5">
+                      {track.artist} • {track.film}
+                    </p>
+                  </div>
+
+                  {/* Duration & Status */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[11px] font-mono text-white/40 tabular-nums">
+                      {formatTime(track.duration)}
+                    </span>
+                    {isSelected && (
+                      <span className="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_rgba(255,153,51,0.8)] animate-pulse" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ═══════════ UNIFIED RESPONSIVE GLASS PLAYER ═══════════ */}
-      <div className="glass w-full max-w-sm sm:max-w-xl rounded-[26px] sm:rounded-full p-4 sm:p-3 sm:pr-5 transition-all duration-300 shadow-2xl border border-white/20">
+      <div className="glass w-full max-w-sm sm:max-w-xl rounded-[26px] sm:rounded-full p-4 sm:p-3 sm:pr-5 transition-all duration-300 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full">
           
           {/* Row 1 on Mobile / Left on Desktop: Vinyl Disc + Title on Mobile */}
@@ -442,8 +624,23 @@ export default function Player() {
             </div>
           </div>
 
-          {/* Right Controls: Prev, Play/Pause, Next */}
-          <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-2 flex-shrink-0 pt-1 sm:pt-0 border-t border-white/10 sm:border-t-0">
+          {/* Right Controls: Playlist Toggle, Prev, Play/Pause, Next */}
+          <div className="flex items-center justify-center sm:justify-end gap-1.5 sm:gap-2 flex-shrink-0 pt-1 sm:pt-0 border-t border-white/10 sm:border-t-0">
+            {/* Playlist / Song Choice Trigger */}
+            <button
+              data-playlist-trigger
+              onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
+              className={`p-2.5 sm:p-2 rounded-full transition-all duration-150 active:scale-95 ${
+                isPlaylistOpen
+                  ? "bg-accent text-black font-bold shadow-md shadow-accent/20"
+                  : "text-white/70 hover:text-white hover:bg-white/10"
+              }`}
+              aria-label="Choose song from playlist"
+              title="Choose song playlist"
+            >
+              <PlaylistIcon />
+            </button>
+
             {/* Previous */}
             <button
               onClick={prevTrack}
