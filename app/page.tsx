@@ -31,7 +31,7 @@ export default function Home() {
       <div className="flex-1" />
 
       {/* ── Player — bottom anchored ── */}
-      <div className="w-full max-w-xl z-10">
+      <div className="w-full max-w-2xl z-10">
         <Player />
       </div>
     </main>
